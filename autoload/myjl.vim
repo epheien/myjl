@@ -1,3 +1,7 @@
+" 实现自己的 jumplist，位置是基于 bufnr, lnum, col, coladd 的，
+" 只要此组合有意义，即认为是有效
+" jump marks 是否相同，只比较 bufnr 和 lnum
+
 if exists('s:loaded')
   finish
 endif
@@ -16,108 +20,98 @@ function myjl#init()
     autocmd WinNew * call myjl#onWinNew()
     autocmd VimEnter * call myjl#onVimEnter()
   augroup END
-  nnoremap <C-o> :call myjl#on_new_jumplist_entry_backward()<CR><C-o>
+  nnoremap <C-o> <C-o>:call myjl#on_new_jumplist_entry_backward()<CR>
 endfunction
 
 function myjl#exit()
-  augroup! myjl
+  silent! augroup! myjl
+  silent! nunmap <C-o>
 endfunction
 
+" 跳转表仅有两种添加新项目的方式
+"   - <C-o>       => 此时往回跳，把当前光标位置添加到最后
+"   - <C-]> etc.  => 此时往前跳，把当前光标位置添加到最后
+"
+" 跳转表可能缩小的情形
+"   - :clearjumps
+"   - 修改文本后，自动修整 jumplist
+"
+" 此函数只处理前向跳转，以及由于文本改变导致 jumplist 删除
 function myjl#onCursorMoved() abort
-  " 跳转表仅有两种添加新项目的方式
-  "   - <C-o>       => 此时往回跳，把当前光标位置添加到最后
-  "   - <C-]> etc.  => 此时往前跳，把当前光标位置添加到最后
   let curr_jumplist = getjumplist()
-  if get(s:prev_jumplist[0], -1, {}) == get(curr_jumplist[0], -1, {})
-    let s:prev_jumplist = curr_jumplist
+  let prev_jumplist = s:prev_jumplist
+  let s:prev_jumplist = curr_jumplist
+
+  let prev_len = len(prev_jumplist[0])
+  let curr_len = len(curr_jumplist[0])
+
+  " BUG: 第二次获取，getjumplist()[1] 才是正确值
+  if curr_jumplist[1] > curr_len
+    let curr_jumplist[1] = curr_len
+  endif
+
+  if curr_len == 0
+    call filter(s:jumplist_flags, 0)
     return
   endif
 
-  " 去除多余的 s:jumplist_flags
-  if len(s:jumplist_flags) > len(curr_jumplist[0])
-    if empty(curr_jumplist[0])
-      "call filter(s:jumplist_flags, 0)
-      let s:jumplist_flags = []
-    else
-      let s:jumplist_flags = s:jumplist_flags[-len(curr_jumplist[0]):-1]
+  " 插入新条目的强特征:
+  "   - (getjumplist()[1] >= len(getjumplist()[0])
+  " 不满足的话，直接 pass
+  if !(curr_jumplist[1] >= len(curr_jumplist[0])) || empty(curr_jumplist[0])
+    return
+  endif
+
+  if prev_len > curr_len
+    " 可以确定是由于 TextChanged 导致 jumplist 修剪了
+    return
+  endif
+
+  " 满足特征的话，需要判断 jumplist 是否修改，直接检查最后一项
+  " NOTE: 不一定正确，例如 TextChanged 导致 jumplist 修剪
+  if prev_len == curr_len
+    if prev_jumplist[0][-1]['bufnr'] == curr_jumplist[0][-1]['bufnr'] &&
+          \ prev_jumplist[0][-1]['lnum'] == curr_jumplist[0][-1]['lnum']
+      return
     endif
   endif
 
-  " (getjumplist()[1] >= len(getjumplist()[0]) => 插入新条目
-  if !(curr_jumplist[1] >= len(curr_jumplist[0])) || empty(curr_jumplist[0])
-    let s:prev_jumplist = curr_jumplist
-    return
-  endif
-
-  " 前向添加跳转表
-  call myjl#on_new_jumplist_entry(s:prev_jumplist[1], curr_jumplist[1])
-
-  let s:prev_jumplist = curr_jumplist
+  " @case 跳转到新位置，并且去除了重复的条目
+  " @case TextChanged 导致最后一项条目修改了
+  call add(s:myjl_jumplist, curr_jumplist[0][-1])
+  let s:myjl_jumplistidx = len(s:myjl_jumplist)
 endfunction
 
 " 创建新窗口时。不用于 Vim 启动时的首个窗口。在 WinEnter 事件之前激活。
 function myjl#onWinNew()
   "echomsg 'enter WinNew'
-  let s:prev_jumplist = getjumplist()
-  let s:myjl[win_getid(winnr())] = s:prev_jumplist
-  let s:jumplist_flags = repeat([1], len(s:prev_jumplist[0]))
+  let s:myjl_jumplist = getjumplist()[0]
+  let s:myjl_jumplistidx = len(s:myjl_jumplist)
 endfunction
 
 function myjl#onVimEnter()
   "echomsg 'enter VimEnter'
-  let s:prev_jumplist = getjumplist()
-  " BUG: s:myjl[idx][1] == 100 !
-  let s:myjl[win_getid(winnr())] = s:prev_jumplist
-  let s:jumplist_flags = repeat([1], len(s:prev_jumplist[0]))
-endfunction
-
-function myjl#trim_jumplist_entry(jumplist, index)
+  let s:myjl_jumplist = getjumplist()[0]
+  let s:myjl_jumplistidx = len(s:myjl_jumplist)
 endfunction
 
 function myjl#on_new_jumplist_entry_backward()
   let curr_jumplist = getjumplist()
-  if curr_jumplist[1] >= len(curr_jumplist[0]) && !empty(curr_jumplist[0])
-    call add(s:jumplist_flags, 1)
+  if curr_jumplist[1] + 2 == len(curr_jumplist[0])
+    call add(s:myjl_jumplist, curr_jumplist[0][-1])
   endif
-endfunction
-
-" 在添加新的jumplist entry之前，删除此之后的所有entry
-"
-" 如果你用跳转命令，当前的行号被插到跳转表的最后。如果相同的行已经在跳转表里，那
-" 会被删除。结果是，CTRL-O 就会直接回到该行之前的位置。
-"
-"    jump line  col file/text
-" 0    2	  1    0 some text
-" 1    1	 70    0 another line
-" 2 >  0  1154   23 end.
-" 3    1  1167    0 foo bar
-" =>
-"    jump line  col file/text
-" 0    4	  1    0 一些文字
-" 1    3	 70    0 另外一行
-" 2    2  1167    0 foo bar
-" 3    1  1154   23 end.
-" 4 >
-"
-function myjl#on_new_jumplist_entry(prev_index, curr_index) abort
-  " 假设没有重复项目，需要禁用 [prev_index + 1 : (curr_index - 2)] 的条目
-  call add(s:jumplist_flags, 1)
-  let sidx = a:prev_index + 1
-  let eidx = a:curr_index - 2
-  if eidx - sidx < -1
-    return
-  endif
-  for idx in range(sidx, eidx)
-    let s:jumplist_flags[idx] = 0
-  endfor
 endfunction
 
 " 显示调试信息
 function myjl#dump()
-  "echo s:myjl
-  echo s:prev_jumplist
-  echo s:jumplist_flags
-  return s:myjl
+  echo s:myjl_jumplist
+  echo s:myjl_jumplistidx
+  return s:myjl_jumplist
+endfunction
+
+function myjl#clear()
+  let s:myjl_jumplistidx = 0
+  call filter(s:myjl_jumplist, 0)
 endfunction
 
 " vi:set sts=2 sw=2 et:
