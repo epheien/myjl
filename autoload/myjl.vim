@@ -8,11 +8,7 @@ endif
 let s:loaded = 1
 
 " winid => w:myjl
-let s:myjl = {}
-let s:prev_curpos = []
 let s:prev_jumplist = [[], -1]
-" 0 表示无效，1 表示有效
-let s:jumplist_flags = []
 
 function myjl#init()
   augroup myjl
@@ -52,7 +48,6 @@ function myjl#onCursorMoved() abort
   endif
 
   if curr_len == 0
-    call filter(s:jumplist_flags, 0)
     return
   endif
 
