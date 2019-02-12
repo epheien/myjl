@@ -70,7 +70,7 @@ function myjl#onCursorMoved() abort
   endif
 
   " @case 跳转到新位置，并且去除了重复的条目
-  " @case TextChanged 导致最后一项条目修改了
+  " @case TextChanged 导致最后一项条目修改了 FIXME: 这种情况无法完善处理
   call filter(w:myjl_jumplist, {idx, val -> idx <= w:myjl_jumplistidx})
   let entry = curr_jumplist[0][-1]
   let laste = get(w:myjl_jumplist, -1, {})
