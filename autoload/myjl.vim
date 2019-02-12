@@ -20,7 +20,8 @@ function myjl#init()
     autocmd WinNew * call myjl#onWinNew()
     autocmd VimEnter * call myjl#onVimEnter()
   augroup END
-  nnoremap <C-o> <C-o>:call myjl#on_new_jumplist_entry_backward()<CR>
+  nnoremap <silent> <C-o> :call myjl#backward()<CR>
+  nnoremap <silent> <C-i> :call myjl#forward()<CR>
 endfunction
 
 function myjl#exit()
@@ -78,8 +79,13 @@ function myjl#onCursorMoved() abort
 
   " @case 跳转到新位置，并且去除了重复的条目
   " @case TextChanged 导致最后一项条目修改了
-  call filter(s:myjl_jumplist, {idx, val -> idx < s:myjl_jumplistidx})
-  call add(s:myjl_jumplist, curr_jumplist[0][-1])
+  call filter(s:myjl_jumplist, {idx, val -> idx <= s:myjl_jumplistidx})
+  let entry = curr_jumplist[0][-1]
+  let laste = get(s:myjl_jumplist, -1, {})
+  if entry['bufnr'] != get(laste, 'bufnr')
+        \ || entry['lnum'] != get(laste, 'lnum')
+    call add(s:myjl_jumplist, curr_jumplist[0][-1])
+  endif
   let s:myjl_jumplistidx = len(s:myjl_jumplist)
 endfunction
 
@@ -96,10 +102,45 @@ function myjl#onVimEnter()
   let s:myjl_jumplistidx = len(s:myjl_jumplist)
 endfunction
 
-function myjl#on_new_jumplist_entry_backward()
+function myjl#forward()
+  if s:myjl_jumplistidx >= len(s:myjl_jumplist) - 1
+    return
+  endif
+  let s:myjl_jumplistidx += 1
+  call myjl#jump()
+endfunction
+
+function myjl#backward()
   let curr_jumplist = getjumplist()
-  if curr_jumplist[1] + 2 == len(curr_jumplist[0])
-    call add(s:myjl_jumplist, curr_jumplist[0][-1])
+  if curr_jumplist[1] >= len(curr_jumplist[0])
+    let curpos = getcurpos()
+    let entry = {}
+    let entry['bufnr'] = bufnr('%')
+    let entry['lnum'] = curpos[1]
+    let entry['col'] = curpos[2]
+    let entry['coladd'] = curpos[3]
+    let laste = get(s:myjl_jumplist, -1, {})
+    if entry['bufnr'] != get(laste, 'bufnr')
+          \ || entry['lnum'] != get(laste, 'lnum')
+      call add(s:myjl_jumplist, entry)
+      let s:myjl_jumplistidx -= 1
+    endif
+    execute "normal! \<C-o>"
+  else
+    if s:myjl_jumplistidx <= 0
+      let s:myjl_jumplistidx = 0
+      return
+    endif
+    let s:myjl_jumplistidx -= 1
+    call myjl#jump()
+  endif
+endfunction
+
+function myjl#jump()
+  let pos = get(s:myjl_jumplist, s:myjl_jumplistidx)
+  if bufexists(pos['bufnr'])
+    execute 'keepjumps b' pos['bufnr']
+    keepjumps call setpos('.', [0, pos['lnum'], pos['col'], pos['coladd']])
   endif
 endfunction
 

@@ -1,4 +1,4 @@
-if exists('s:loaded')
+if exists('s:loaded') || has('nvim')
   finish
 endif
 let s:loaded = 1
