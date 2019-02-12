@@ -78,6 +78,7 @@ function myjl#onCursorMoved() abort
 
   " @case 跳转到新位置，并且去除了重复的条目
   " @case TextChanged 导致最后一项条目修改了
+  call filter(s:myjl_jumplist, {idx, val -> idx < s:myjl_jumplistidx})
   call add(s:myjl_jumplist, curr_jumplist[0][-1])
   let s:myjl_jumplistidx = len(s:myjl_jumplist)
 endfunction
