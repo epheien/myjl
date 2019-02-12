@@ -7,9 +7,6 @@ if exists('s:loaded')
 endif
 let s:loaded = 1
 
-" winid => w:myjl
-let s:prev_jumplist = [[], -1]
-
 function myjl#init()
   augroup myjl
     autocmd CursorMoved * call myjl#onCursorMoved()
@@ -36,8 +33,8 @@ endfunction
 " 此函数只处理前向跳转，以及由于文本改变导致 jumplist 删除
 function myjl#onCursorMoved() abort
   let curr_jumplist = getjumplist()
-  let prev_jumplist = s:prev_jumplist
-  let s:prev_jumplist = curr_jumplist
+  let prev_jumplist = w:prev_jumplist
+  let w:prev_jumplist = curr_jumplist
 
   let prev_len = len(prev_jumplist[0])
   let curr_len = len(curr_jumplist[0])
@@ -74,34 +71,34 @@ function myjl#onCursorMoved() abort
 
   " @case 跳转到新位置，并且去除了重复的条目
   " @case TextChanged 导致最后一项条目修改了
-  call filter(s:myjl_jumplist, {idx, val -> idx <= s:myjl_jumplistidx})
+  call filter(w:myjl_jumplist, {idx, val -> idx <= w:myjl_jumplistidx})
   let entry = curr_jumplist[0][-1]
-  let laste = get(s:myjl_jumplist, -1, {})
+  let laste = get(w:myjl_jumplist, -1, {})
   if entry['bufnr'] != get(laste, 'bufnr')
         \ || entry['lnum'] != get(laste, 'lnum')
-    call add(s:myjl_jumplist, curr_jumplist[0][-1])
+    call add(w:myjl_jumplist, curr_jumplist[0][-1])
   endif
-  let s:myjl_jumplistidx = len(s:myjl_jumplist)
+  let w:myjl_jumplistidx = len(w:myjl_jumplist)
 endfunction
 
 " 创建新窗口时。不用于 Vim 启动时的首个窗口。在 WinEnter 事件之前激活。
 function myjl#onWinNew()
   "echomsg 'enter WinNew'
-  let s:myjl_jumplist = getjumplist()[0]
-  let s:myjl_jumplistidx = len(s:myjl_jumplist)
+  let w:prev_jumplist = getjumplist()
+  let w:myjl_jumplist = w:prev_jumplist[0]
+  let w:myjl_jumplistidx = len(w:myjl_jumplist)
 endfunction
 
 function myjl#onVimEnter()
   "echomsg 'enter VimEnter'
-  let s:myjl_jumplist = getjumplist()[0]
-  let s:myjl_jumplistidx = len(s:myjl_jumplist)
+  call myjl#onWinNew()
 endfunction
 
 function myjl#forward()
-  if s:myjl_jumplistidx >= len(s:myjl_jumplist) - 1
+  if w:myjl_jumplistidx >= len(w:myjl_jumplist) - 1
     return
   endif
-  let s:myjl_jumplistidx += 1
+  let w:myjl_jumplistidx += 1
   call myjl#jump()
 endfunction
 
@@ -114,25 +111,25 @@ function myjl#backward()
     let entry['lnum'] = curpos[1]
     let entry['col'] = curpos[2]
     let entry['coladd'] = curpos[3]
-    let laste = get(s:myjl_jumplist, -1, {})
+    let laste = get(w:myjl_jumplist, -1, {})
     if entry['bufnr'] != get(laste, 'bufnr')
           \ || entry['lnum'] != get(laste, 'lnum')
-      call add(s:myjl_jumplist, entry)
-      let s:myjl_jumplistidx -= 1
+      call add(w:myjl_jumplist, entry)
+      let w:myjl_jumplistidx -= 1
     endif
     execute "normal! \<C-o>"
   else
-    if s:myjl_jumplistidx <= 0
-      let s:myjl_jumplistidx = 0
+    if w:myjl_jumplistidx <= 0
+      let w:myjl_jumplistidx = 0
       return
     endif
-    let s:myjl_jumplistidx -= 1
+    let w:myjl_jumplistidx -= 1
     call myjl#jump()
   endif
 endfunction
 
 function myjl#jump()
-  let pos = get(s:myjl_jumplist, s:myjl_jumplistidx)
+  let pos = get(w:myjl_jumplist, w:myjl_jumplistidx)
   if bufexists(pos['bufnr'])
     execute 'keepjumps b' pos['bufnr']
     keepjumps call setpos('.', [0, pos['lnum'], pos['col'], pos['coladd']])
@@ -141,14 +138,14 @@ endfunction
 
 " 显示调试信息
 function myjl#dump()
-  echo s:myjl_jumplist
-  echo s:myjl_jumplistidx
-  return s:myjl_jumplist
+  echo w:myjl_jumplist
+  echo w:myjl_jumplistidx
+  return w:myjl_jumplist
 endfunction
 
 function myjl#clear()
-  let s:myjl_jumplistidx = 0
-  call filter(s:myjl_jumplist, 0)
+  let w:myjl_jumplistidx = 0
+  call filter(w:myjl_jumplist, 0)
 endfunction
 
 " vi:set sts=2 sw=2 et:
