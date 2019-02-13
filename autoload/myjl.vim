@@ -9,17 +9,27 @@ let s:loaded = 1
 
 function myjl#init()
   augroup myjl
+    autocmd!
     autocmd CursorMoved * call myjl#onCursorMoved()
     autocmd WinNew * call myjl#onWinNew()
     autocmd VimEnter * call myjl#onVimEnter()
   augroup END
   nnoremap <silent> <C-o> :call myjl#backward()<CR>
   nnoremap <silent> <C-i> :call myjl#forward()<CR>
+  command! MyjlExit call myjl#exit()
+  command! MyjlDump call myjl#dump()
+  command! MyjlFresh call myjl#onWinNew()
+  command! MyjlClear call myjl#clear()
 endfunction
 
 function myjl#exit()
   silent! augroup! myjl
   silent! nunmap <C-o>
+  silent! nunmap <C-i>
+  delcommand MyjlExit
+  delcommand MyjlDump
+  delcommand MyjlFresh
+  delcommand MyjlClear
 endfunction
 
 " 跳转表仅有两种添加新项目的方式
@@ -138,9 +148,8 @@ endfunction
 
 " 显示调试信息
 function myjl#dump()
-  echo w:myjl_jumplist
-  echo w:myjl_jumplistidx
-  return w:myjl_jumplist
+  let result = [w:myjl_jumplist, w:myjl_jumplistidx]
+  return result
 endfunction
 
 function myjl#clear()
