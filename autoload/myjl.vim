@@ -17,7 +17,7 @@ function myjl#init()
   nnoremap <silent> <C-o> :call myjl#backward()<CR>
   nnoremap <silent> <C-i> :call myjl#forward()<CR>
   command! MyjlExit call myjl#exit()
-  command! MyjlDump call myjl#dump()
+  command! MyjlDump call myjl#dump(0)
   command! MyjlFresh call myjl#onWinNew()
   command! MyjlClear call myjl#clear()
 endfunction
@@ -147,8 +147,12 @@ function myjl#jump()
 endfunction
 
 " 显示调试信息
-function myjl#dump()
+function myjl#dump(...)
   let result = [w:myjl_jumplist, w:myjl_jumplistidx]
+  let silent = get(a:000, 0, 1)
+  if !silent
+    echo result
+  endif
   return result
 endfunction
 
