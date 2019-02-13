@@ -43,6 +43,9 @@ endfunction
 " 此函数只处理前向跳转，以及由于文本改变导致 jumplist 删除
 function myjl#onCursorMoved() abort
   let curr_jumplist = getjumplist()
+  if !exists('w:prev_jumplist')
+    call myjl#onWinNew()
+  endif
   let prev_jumplist = w:prev_jumplist
   let w:prev_jumplist = curr_jumplist
 
