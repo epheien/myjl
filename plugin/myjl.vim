@@ -1,4 +1,4 @@
-if exists('s:loaded') || has('nvim')
+if exists('s:loaded') || !exists('*getjumplist')
   finish
 endif
 let s:loaded = 1
