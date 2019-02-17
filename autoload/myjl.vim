@@ -62,7 +62,7 @@ function myjl#onCursorMoved() abort
   endif
 
   " 插入新条目的强特征:
-  "   - (getjumplist()[1] >= len(getjumplist()[0])
+  "   - getjumplist()[1] >= len(getjumplist()[0])
   " 不满足的话，直接 pass
   if !(curr_jumplist[1] >= len(curr_jumplist[0])) || empty(curr_jumplist[0])
     return
@@ -91,6 +91,8 @@ function myjl#onCursorMoved() abort
         \ || entry['lnum'] != get(lasted, 'lnum')
     call add(w:myjl_jumplist, curr_jumplist[0][-1])
   endif
+  " 当发生回跳时，添加这个条目
+  let w:pend_entry = myjl#makeEntry()
   let w:myjl_jumplistidx = len(w:myjl_jumplist)
 endfunction
 
@@ -100,6 +102,7 @@ function myjl#onWinNew()
   let w:prev_jumplist = getjumplist()
   let w:myjl_jumplist = w:prev_jumplist[0]
   let w:myjl_jumplistidx = len(w:myjl_jumplist)
+  let w:pend_entry = {}   " 用于记忆最新的前向跳转位置
 endfunction
 
 function myjl#onVimEnter()
@@ -118,18 +121,12 @@ endfunction
 function myjl#backward()
   let curr_jumplist = getjumplist()
   if curr_jumplist[1] >= len(curr_jumplist[0])
-    let curpos = getcurpos()
-    let entry = {}
-    let entry['bufnr'] = bufnr('%')
-    let entry['lnum'] = curpos[1]
-    let entry['col'] = curpos[2]
-    let entry['coladd'] = curpos[3]
-    let lasted = get(w:myjl_jumplist, -1, {})
-    if entry['bufnr'] != get(lasted, 'bufnr')
-          \ || entry['lnum'] != get(lasted, 'lnum')
-      call add(w:myjl_jumplist, entry)
-      let w:myjl_jumplistidx -= 1
+    if w:myjl_jumplistidx <= 0
+      return
     endif
+    call myjl#addEntry(w:pend_entry)
+    let w:pend_entry = {}
+    let w:myjl_jumplistidx -= 1
     execute "normal! \<C-o>"
   else
     if w:myjl_jumplistidx <= 0
@@ -162,6 +159,29 @@ endfunction
 function myjl#clear()
   let w:myjl_jumplistidx = 0
   call filter(w:myjl_jumplist, 0)
+endfunction
+
+" 返回 0 表示没有插入，当前 entry 为重复的
+" 返回 1 表示插入成功
+function myjl#addEntry(entry)
+  let entry = a:entry
+  let lasted = get(w:myjl_jumplist, -1, {})
+  if entry['bufnr'] != get(lasted, 'bufnr')
+        \ || entry['lnum'] != get(lasted, 'lnum')
+    call add(w:myjl_jumplist, entry)
+    return 1
+  endif
+  return 0
+endfunction
+
+function myjl#makeEntry()
+  let curpos = getcurpos()
+  let entry = {}
+  let entry['bufnr'] = bufnr('%')
+  let entry['lnum'] = curpos[1]
+  let entry['col'] = curpos[2]
+  let entry['coladd'] = curpos[3]
+  return entry
 endfunction
 
 " vi:set sts=2 sw=2 et:
