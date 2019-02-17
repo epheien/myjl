@@ -86,9 +86,9 @@ function myjl#onCursorMoved() abort
   " @case TextChanged 导致最后一项条目修改了 FIXME: 这种情况无法完善处理
   call filter(w:myjl_jumplist, {idx, val -> idx <= w:myjl_jumplistidx})
   let entry = curr_jumplist[0][-1]
-  let laste = get(w:myjl_jumplist, -1, {})
-  if entry['bufnr'] != get(laste, 'bufnr')
-        \ || entry['lnum'] != get(laste, 'lnum')
+  let lasted = get(w:myjl_jumplist, -1, {})
+  if entry['bufnr'] != get(lasted, 'bufnr')
+        \ || entry['lnum'] != get(lasted, 'lnum')
     call add(w:myjl_jumplist, curr_jumplist[0][-1])
   endif
   let w:myjl_jumplistidx = len(w:myjl_jumplist)
@@ -124,9 +124,9 @@ function myjl#backward()
     let entry['lnum'] = curpos[1]
     let entry['col'] = curpos[2]
     let entry['coladd'] = curpos[3]
-    let laste = get(w:myjl_jumplist, -1, {})
-    if entry['bufnr'] != get(laste, 'bufnr')
-          \ || entry['lnum'] != get(laste, 'lnum')
+    let lasted = get(w:myjl_jumplist, -1, {})
+    if entry['bufnr'] != get(lasted, 'bufnr')
+          \ || entry['lnum'] != get(lasted, 'lnum')
       call add(w:myjl_jumplist, entry)
       let w:myjl_jumplistidx -= 1
     endif
