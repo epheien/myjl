@@ -7,10 +7,13 @@ if exists('s:loaded')
 endif
 let s:loaded = 1
 
+let s:prev_winid = 0
+
 function myjl#init()
   augroup myjl
     autocmd!
     autocmd CursorMoved * call myjl#onCursorMoved()
+    autocmd BufEnter * call myjl#onCursorMoved()
     autocmd WinNew * call myjl#onWinNew()
     autocmd VimEnter * call myjl#onVimEnter()
   augroup END
@@ -103,6 +106,7 @@ function myjl#onWinNew()
   let w:myjl_jumplist = w:prev_jumplist[0]
   let w:myjl_jumplistidx = len(w:myjl_jumplist)
   let w:pend_entry = {}   " 用于记忆最新的前向跳转位置
+  let s:prev_winid = win_getid()
 endfunction
 
 function myjl#onVimEnter()
@@ -157,8 +161,10 @@ function myjl#dump(...)
 endfunction
 
 function myjl#clear()
-  let w:myjl_jumplistidx = 0
+  let w:prev_jumplist = [[], 0]
   call filter(w:myjl_jumplist, 0)
+  let w:myjl_jumplistidx = 0
+  let w:pend_entry = {}
 endfunction
 
 " 返回 0 表示没有插入，当前 entry 为重复的
