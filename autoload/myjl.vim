@@ -88,7 +88,7 @@ function myjl#onCursorMoved() abort
   " @case 跳转到新位置，并且去除了重复的条目
   " @case TextChanged 导致最后一项条目修改了 FIXME: 这种情况无法完善处理
   call filter(w:myjl_jumplist, {idx, val -> idx <= w:myjl_jumplistidx})
-  if !empty(w:pend_entry)
+  if !empty(w:pend_entry) && g:myjl_mode
     let entry = w:pend_entry
   else
     let entry = curr_jumplist[0][-1]
@@ -132,7 +132,11 @@ function myjl#backward()
     if w:myjl_jumplistidx <= 0
       return
     endif
-    call myjl#addEntry(w:pend_entry)
+    if !empty(w:pend_entry) && g:myjl_mode
+      call myjl#addEntry(w:pend_entry)
+    else
+      call myjl#addEntry(myjl#makeEntry())
+    endif
     let w:pend_entry = {}
     let w:myjl_jumplistidx -= 1
     execute "normal! \<C-o>"

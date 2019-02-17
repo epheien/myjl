@@ -3,6 +3,8 @@ if exists('s:loaded') || !exists('*getjumplist')
 endif
 let s:loaded = 1
 
+let g:myjl_mode = 0
+
 command MyjlInit call myjl#init()
 if get(g:, 'myjl_enable', 1)
   call myjl#init()
