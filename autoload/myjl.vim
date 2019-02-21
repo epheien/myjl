@@ -133,12 +133,17 @@ function myjl#backward()
     if g:myjl_save_forward && !empty(w:pend_entry) && !myjl#isEntryEqual(curr_entry, w:pend_entry)
       call myjl#addEntry(w:pend_entry)
       let w:myjl_jumplistidx += 1
+      " NOTE: 以下模拟往 vim 的 jumplist 添加 w:pend_entry 条目
+      " 标记当前位置为 '，然后 setpos 到上一个 '，再跳到 '，这样实现添加
+      " jumplist 的目的
+      normal! m'
+      keepjumps call setpos('.', [0, w:pend_entry['lnum'], w:pend_entry['col'], w:pend_entry['coladd']])
+      normal! `'
     endif
     call myjl#addEntry(curr_entry)
     let w:pend_entry = {}
     let w:myjl_jumplistidx -= 1
     execute "normal! \<C-o>"
-    call myjl#jump()
   else
     if w:myjl_jumplistidx <= 0
       let w:myjl_jumplistidx = 0
@@ -162,6 +167,7 @@ function myjl#dump(...)
   let result = [w:myjl_jumplist, w:myjl_jumplistidx]
   let silent = get(a:000, 0, 1)
   if !silent
+    echo w:pend_entry
     echo result
   endif
   return result
