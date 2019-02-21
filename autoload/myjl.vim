@@ -88,17 +88,14 @@ function myjl#onCursorMoved() abort
   " @case 跳转到新位置，并且去除了重复的条目
   " @case TextChanged 导致最后一项条目修改了 FIXME: 这种情况无法完善处理
   call filter(w:myjl_jumplist, {idx, val -> idx <= w:myjl_jumplistidx})
-  if !empty(w:pend_entry) && g:myjl_mode
-    let entry = w:pend_entry
-  else
-    let entry = curr_jumplist[0][-1]
-  endif
+  " NOTE: jumplist 最后一项就是需要新添加的条目
+  let entry = curr_jumplist[0][-1]
   let lasted = get(w:myjl_jumplist, -1, {})
   if entry['bufnr'] != get(lasted, 'bufnr')
         \ || entry['lnum'] != get(lasted, 'lnum')
     call add(w:myjl_jumplist, entry)
   endif
-  " 当发生回跳时，添加这个条目
+  " 记录当前光标位置，备用
   let w:pend_entry = myjl#makeEntry()
   let w:myjl_jumplistidx = len(w:myjl_jumplist)
 endfunction
@@ -132,11 +129,12 @@ function myjl#backward()
     if w:myjl_jumplistidx <= 0
       return
     endif
-    if !empty(w:pend_entry) && g:myjl_mode
+    let curr_entry = myjl#makeEntry()
+    if g:myjl_save_forward && !empty(w:pend_entry) && !myjl#isEntryEqual(curr_entry, w:pend_entry)
       call myjl#addEntry(w:pend_entry)
-    else
-      call myjl#addEntry(myjl#makeEntry())
+      let w:myjl_jumplistidx += 1
     endif
+    call myjl#addEntry(curr_entry)
     let w:pend_entry = {}
     let w:myjl_jumplistidx -= 1
     execute "normal! \<C-o>"
@@ -174,6 +172,15 @@ function myjl#clear()
   call filter(w:myjl_jumplist, 0)
   let w:myjl_jumplistidx = 0
   let w:pend_entry = {}
+endfunction
+
+function myjl#isEntryEqual(a, b)
+  let a = a:a
+  let b = a:b
+  if get(a, 'bufnr') == get(b, 'bufnr') && get(a, 'lnum') == get(b, 'lnum')
+    return 1
+  endif
+  return 0
 endfunction
 
 " 返回 0 表示没有插入，当前 entry 为重复的
