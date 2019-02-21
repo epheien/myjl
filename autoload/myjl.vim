@@ -130,6 +130,8 @@ function myjl#backward()
       return
     endif
     let curr_entry = myjl#makeEntry()
+    " NOTE: vim 新建窗口的时候，w:pend_entry 的获取可能不正确，直接用 `' 即可
+    let w:pend_entry = myjl#makeEntry("''")
     if g:myjl_save_forward && !empty(w:pend_entry) && !myjl#isEntryEqual(curr_entry, w:pend_entry)
       call myjl#addEntry(w:pend_entry)
       let w:myjl_jumplistidx += 1
@@ -202,8 +204,8 @@ function myjl#addEntry(entry)
   return 0
 endfunction
 
-function myjl#makeEntry()
-  let curpos = getcurpos()
+function myjl#makeEntry(...)
+  let curpos = getpos(get(a:000, 0, '.'))
   let entry = {}
   let entry['bufnr'] = bufnr('%')
   let entry['lnum'] = curpos[1]
