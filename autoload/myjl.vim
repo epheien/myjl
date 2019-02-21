@@ -90,13 +90,16 @@ function myjl#onCursorMoved() abort
   call filter(w:myjl_jumplist, {idx, val -> idx <= w:myjl_jumplistidx})
   " NOTE: jumplist 最后一项就是需要新添加的条目
   let entry = curr_jumplist[0][-1]
+  let prev = w:pend_entry
+  if g:myjl_save_forward && !empty(prev) && !myjl#isEntryEqual(entry, prev)
+    call add(w:myjl_jumplist, prev)
+  endif
   let lasted = get(w:myjl_jumplist, -1, {})
-  if entry['bufnr'] != get(lasted, 'bufnr')
-        \ || entry['lnum'] != get(lasted, 'lnum')
+  if !myjl#isEntryEqual(entry, lasted)
     call add(w:myjl_jumplist, entry)
   endif
   " 记录当前光标位置，备用
-  let w:pend_entry = myjl#makeEntry()
+  let w:pend_entry = myjl#makeEntry("''")
   let w:myjl_jumplistidx = len(w:myjl_jumplist)
 endfunction
 
