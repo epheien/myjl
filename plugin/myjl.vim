@@ -1,4 +1,4 @@
-if exists('s:loaded') || !exists('*getjumplist')
+if exists('s:loaded') || !exists('*getjumplist') || exists('&jumpoptions')
   finish
 endif
 let s:loaded = 1
