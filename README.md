@@ -4,6 +4,8 @@ My own jumplist plugin for vim.
 
 This plugin is my attempt for implement a web browser like jumplist.
 
+**NOTE**: This plugin is no longer needed, you just need to upgrade your vim/nvim and run `:set jumpoptions+=stack`
+
 ## Install
 ```viml
 Plug 'epheien/myjl'
